@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#11141a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+
+    <title>Mohamed EL MACHHOUNE | Software Engineer & Full Stack Developer</title>
+    <meta
+      name="description"
+      content="Portfolio of Mohamed EL MACHHOUNE, Software Engineer and Full Stack Developer specialized in modern web applications, MERN, React, Node.js, Next.js and AI integration."
+    />
+    <meta
+      name="keywords"
+      content="Mohamed EL MACHHOUNE, Software Engineer, Full Stack Developer, MERN, React, Node.js, Next.js, TypeScript, AI Integration, Web Developer, Portfolio"
+    />
+    <meta name="author" content="Mohamed EL MACHHOUNE" />
+    <meta name="robots" content="index, follow" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mohamed EL MACHHOUNE | Software Engineer & Full Stack Developer" />
+    <meta
+      property="og:description"
+      content="Software Engineer and Full Stack Developer specialized in modern web applications, the MERN stack, and AI integration."
+    />
+    <meta property="og:image" content="/icon.png" />
+    <meta property="og:site_name" content="Mohamed EL MACHHOUNE" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Mohamed EL MACHHOUNE | Software Engineer & Full Stack Developer" />
+    <meta
+      name="twitter:description"
+      content="Software Engineer and Full Stack Developer specialized in modern web applications, the MERN stack, and AI integration."
+    />
+    <meta name="twitter:image" content="/icon.png" />
+
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("portfolio-theme");
+          var theme = stored === "light" || stored === "dark" ? stored : "dark";
+          document.documentElement.classList.toggle("dark", theme === "dark");
+          document.documentElement.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
