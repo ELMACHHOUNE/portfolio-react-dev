@@ -1,0 +1,413 @@
+/* ==========================================================================
+   TechCubes — isometric technology cluster
+   --------------------------------------------------------------------------
+   Everything is derived from ONE value: --cube-size.
+
+   Projection
+   ----------
+   The top face is a square with `rotateX(60deg) rotateZ(45deg)` (orthographic:
+   no perspective). That produces a classic 2:1 isometric rhombus whose
+   horizontal diagonal equals the tile width and whose edges have a slope of
+   atan(0.5) ≈ 26.565°. The side faces reuse that exact angle with skewY().
+
+   Layer order
+   -----------
+   .tech-cube              → absolutely positioned anchor, z-index by row
+     .tech-cube__enter     → entrance (opacity + transform)
+       .tech-cube__float   → idle float (transform)
+         .tech-cube__top   → rhombus lid + icon + rim
+         .tech-cube__side  → two masked parallelograms
+         .tech-cube__edge  → front vertical specular line
+   ========================================================================== */
+
+.tech-cubes {
+  /* Public knobs ---------------------------------------------------------- */
+  --tech-cubes-bg: #000;
+  --cube-size-base: 72px;
+
+  /* Fluid size: honours the `size` prop on desktop, never overflows mobile. */
+  --cube-size: min(var(--cube-size-base), 10vw);
+
+  /* Isometric geometry ----------------------------------------------------
+     155px tile + 81px row step at the default 72px cube size.              */
+  --tile-w: calc(var(--cube-size) * 2.1528); /* ≈155px */
+  --tile-h: calc(var(--tile-w) * 0.5); /* rhombus height ≈77.5px */
+  --face: calc(var(--tile-w) * 0.7071068); /* square side before projection */
+  --row-step: calc(var(--tile-w) * 0.5226); /* ≈81px */
+  --iso-skew: 26.565deg; /* atan(0.5) — matches rotateX(60deg) */
+
+  --cols: 4;
+  --rows: 5;
+  --stage-w: calc(var(--tile-w) * var(--cols));
+  --stage-h: calc(
+    var(--tile-h) + var(--row-step) * (var(--rows) - 1) + var(--tile-h) *
+      0.5 + var(--cube-size) * 1.7
+  );
+
+  /* Materials ------------------------------------------------------------- */
+  --top-hi: #262626;
+  --top-mid: #1f1f1f;
+  --top-lo: #1a1a1a;
+
+  --side-left-hi: #1a1a1a;
+  --side-left-lo: #060606;
+  --side-right-hi: #141414;
+  --side-right-lo: #040404;
+
+  --rim-color: rgba(255, 255, 255, 0.42);
+  --rim-color-hot: rgba(255, 255, 255, 0.95);
+
+  /* Layout ---------------------------------------------------------------- */
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  background: var(--tech-cubes-bg);
+  color-scheme: dark;
+  isolation: isolate;
+}
+
+.tech-cubes__stage {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--stage-w);
+  height: var(--stage-h);
+
+  /* Orthographic projection (no `perspective`) keeps the isometric look and
+     lets the skewed side faces line up perfectly with the rotated top face. */
+  perspective: none;
+  transform-style: preserve-3d;
+}
+
+/* --------------------------------------------------------------------------
+   Cube anchor
+   -------------------------------------------------------------------------- */
+
+.tech-cube {
+  /* Side-face depth, published per cube as `height`. */
+  --cube-depth: calc(var(--cube-size) * var(--height, 1));
+
+  position: absolute;
+  left: calc(var(--tile-w) * var(--x));
+  top: calc(var(--tile-h) * 0.5 + var(--row-step) * var(--y));
+
+  width: 0;
+  height: 0;
+
+  /* Front rows paint over back rows. */
+  z-index: calc(20 + var(--row));
+
+  transform-style: preserve-3d;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tech-cube:hover {
+  /* Lift along the screen-vertical axis (≈12px at the default size). */
+  transform: translate3d(0, calc(var(--cube-size) * -0.1667), 0);
+  z-index: 999; /* lifted cube must clear every row */
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   Animation layers
+   -------------------------------------------------------------------------- */
+
+.tech-cube__enter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+
+  opacity: 0;
+  transform-style: preserve-3d;
+  animation: tech-cube-in 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 60ms);
+}
+
+.tech-cube__float {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+/* Idle float is opt-in through the `float` prop. */
+.tech-cubes--float .tech-cube__float {
+  animation: tech-cube-float 6s ease-in-out infinite;
+  /* Negative, staggered delays desynchronise the cubes. */
+  animation-delay: calc(var(--i) * -0.37s);
+}
+
+@keyframes tech-cube-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, calc(var(--cube-size) * 0.55), 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes tech-cube-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, calc(var(--cube-size) * -0.045), 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Top face (rhombus lid)
+   -------------------------------------------------------------------------- */
+
+.tech-cube__top {
+  position: absolute;
+  top: calc(var(--face) * -0.5);
+  left: calc(var(--face) * -0.5);
+  width: var(--face);
+  height: var(--face);
+
+  /* Orthographic isometric projection of a horizontal square. */
+  transform: rotateX(60deg) rotateZ(45deg) translateZ(0.01px);
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+
+  background:
+    radial-gradient(
+      120% 120% at 28% 22%,
+      rgba(255, 255, 255, 0.07),
+      transparent 58%
+    ),
+    linear-gradient(145deg, var(--top-hi) 0%, var(--top-mid) 58%, var(--top-lo) 100%);
+
+  /* Soft inner shadow + very subtle outer glow. */
+  box-shadow:
+    inset 0 0 calc(var(--cube-size) * 0.38) rgba(0, 0, 0, 0.85),
+    0 0 calc(var(--cube-size) * 0.28) rgba(255, 255, 255, 0.035);
+}
+
+/* Thin rim on the two front edges. In the square's local space those are the
+   left and bottom edges, which project onto the lower-left / lower-right
+   edges of the rhombus. */
+.tech-cube__rim {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border-left: 1px solid var(--rim-color);
+  border-bottom: 1px solid var(--rim-color);
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.28));
+  opacity: 0.85;
+  pointer-events: none;
+  transition:
+    border-color 0.3s ease,
+    filter 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.tech-cube:hover .tech-cube__rim {
+  border-color: var(--rim-color-hot);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.65));
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Icons — painted on the lid
+   -------------------------------------------------------------------------- */
+
+.tech-cube__icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+
+  /* ≈40% of the rhombus' horizontal diagonal. */
+  width: calc(var(--tile-w) * 0.4);
+  height: calc(var(--tile-w) * 0.4);
+
+  /* Counter-rotate inside the lid so the logo stays upright, then inherit the
+     parent's rotateX(60deg) squash: the icon is still on the same 3D plane. */
+  transform: translate(-50%, -50%) rotateZ(-45deg);
+
+  color: var(--brand, #fff);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.08));
+  filter: drop-shadow(
+    0 0 calc(var(--cube-size) * 0.06)
+      color-mix(in srgb, var(--brand, #fff) 45%, transparent)
+  );
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
+}
+
+.tech-cube__glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tech-cube:hover .tech-cube__icon {
+  opacity: 1;
+  filter: drop-shadow(
+      0 0 calc(var(--cube-size) * 0.04) var(--brand, #fff)
+    )
+    drop-shadow(
+      0 0 calc(var(--cube-size) * 0.14)
+        color-mix(in srgb, var(--brand, #fff) 55%, transparent)
+    );
+}
+
+/* --------------------------------------------------------------------------
+   Side faces — skewed parallelograms fading into the black
+   -------------------------------------------------------------------------- */
+
+.tech-cube__side {
+  position: absolute;
+  top: 0;
+  width: calc(var(--tile-w) * 0.5);
+  height: var(--cube-depth);
+  pointer-events: none;
+
+  /* Bottom fade: the cube dissolves into the darkness. */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 42%,
+    rgba(0, 0, 0, 0.62) 72%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 42%,
+    rgba(0, 0, 0, 0.62) 72%,
+    transparent 100%
+  );
+}
+
+/* Top edge catches the light. */
+.tech-cube__side::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1),
+    transparent 22%
+  );
+}
+
+.tech-cube__side--left {
+  left: calc(var(--tile-w) * -0.5);
+  transform-origin: 0 0;
+  transform: skewY(var(--iso-skew));
+  background: linear-gradient(
+    180deg,
+    var(--side-left-hi) 0%,
+    var(--side-left-lo) 100%
+  );
+}
+
+.tech-cube__side--right {
+  left: 0;
+  transform-origin: 100% 0;
+  transform: skewY(calc(var(--iso-skew) * -1));
+  background: linear-gradient(
+    180deg,
+    var(--side-right-hi) 0%,
+    var(--side-right-lo) 100%
+  );
+}
+
+/* Specular highlight on the vertical edge between the two side faces. */
+.tech-cube__edge {
+  position: absolute;
+  top: calc(var(--tile-h) * 0.5);
+  left: 0;
+  width: 1px;
+  height: var(--cube-depth);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.04) 38%,
+    transparent 82%
+  );
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Visually hidden per-cube label (the cluster is exposed as one role="img")
+   -------------------------------------------------------------------------- */
+
+.tech-cube__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive fine-tuning
+   -------------------------------------------------------------------------- */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .tech-cubes {
+    --cube-size: min(var(--cube-size-base), 9.6vw);
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .tech-cubes {
+    --cube-size: min(var(--cube-size-base), 9.4vw);
+  }
+
+  /* Keep the rim readable when the whole scene is small. */
+  .tech-cube__rim {
+    border-left-width: 1px;
+    border-bottom-width: 1px;
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .tech-cube {
+    transition: none;
+  }
+
+  .tech-cube:hover {
+    transform: none;
+  }
+
+  .tech-cube__enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .tech-cubes--float .tech-cube__float {
+    animation: none;
+  }
+
+  .tech-cube__icon,
+  .tech-cube__rim {
+    transition: none;
+  }
+}
