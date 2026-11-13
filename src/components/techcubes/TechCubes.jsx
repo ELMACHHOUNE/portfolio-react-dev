@@ -313,10 +313,26 @@ export function TechCubes({
     .filter(Boolean)
     .join(" ");
 
+  /* Let custom layouts grow the stage instead of clipping them. */
+  const cols = cubes.length
+    ? Math.max(...cubes.map((cube) => cube.x ?? 0)) + 0.5
+    : 4;
+  const rows = cubes.length
+    ? Math.max(...cubes.map((cube) => cube.y ?? 0)) + 1
+    : 5;
+  const maxHeight = cubes.length
+    ? Math.max(...cubes.map((cube) => cube.height ?? 1)) + 0.12
+    : 1.7;
+
   return (
     <div
       className={rootClassName}
-      style={{ "--cube-size-base": `${size}px` }}
+      style={{
+        "--cube-size-base": `${size}px`,
+        "--cols": cols,
+        "--rows": rows,
+        "--max-height": maxHeight,
+      }}
       role="img"
       aria-label="Technology stack"
     >

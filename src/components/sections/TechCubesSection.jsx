@@ -13,7 +13,7 @@ export function TechCubesSection() {
             # the stack
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Sixteen tools, one stack
+            {defaultCubes.length} tools, one stack
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-white/45 sm:text-base">
             Hover a cube to lift it — every technology sits on its own little
