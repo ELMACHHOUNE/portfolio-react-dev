@@ -283,8 +283,8 @@ function WorkspaceScene({ animate, dark }) {
         </g>
 
         {/* ambient glows */}
-        <ellipse cx="760" cy="440" rx="520" ry="330" fill="url(#ws-glow)" />
-        <ellipse cx="1180" cy="610" rx="260" ry="150" fill="url(#ws-warm)" />
+        <ellipse cx="800" cy="440" rx="520" ry="330" fill="url(#ws-glow)" />
+        <ellipse cx="1220" cy="610" rx="260" ry="150" fill="url(#ws-warm)" />
 
         {/* desk */}
         <rect x="0" y="636" width="1600" height="270" fill="url(#ws-desk)" />
@@ -300,7 +300,7 @@ function WorkspaceScene({ animate, dark }) {
         />
 
         {/* plant */}
-        <g transform="translate(330 640) rotate(-5)">
+        <g transform="translate(370 640) rotate(-5)">
           <path
             d="M-48 0 h96 l-13 -76 h-70 z"
             fill={p.plant.pot}
@@ -330,10 +330,10 @@ function WorkspaceScene({ animate, dark }) {
         {/* laptop */}
         <g>
           <motion.rect
-            x="536"
-            y="300"
-            width="368"
-            height="300"
+            x="620"
+            y="304"
+            width="366"
+            height="296"
             rx="20"
             fill={p.bloom}
             animate={animate ? { opacity: p.bloomOpacity } : { opacity: p.bloomOpacity[1] }}
@@ -342,23 +342,23 @@ function WorkspaceScene({ animate, dark }) {
           />
 
           <rect
-            x="520"
-            y="288"
-            width="400"
-            height="326"
+            x="604"
+            y="292"
+            width="392"
+            height="320"
             rx="18"
             fill="url(#ws-lid)"
             stroke={p.edge}
             strokeWidth="2"
           />
-          <rect x="538" y="306" width="364" height="290" rx="8" fill="url(#ws-screen)" />
+          <rect x="621" y="309" width="358" height="286" rx="8" fill="url(#ws-screen)" />
 
           {SCREEN_ROWS.map((row, ri) => (
-            <g key={ri} transform={`translate(0 ${342 + ri * 24})`}>
+            <g key={ri} transform={`translate(0 ${346 + ri * 24})`}>
               {row.map(([x, w, key], si) => (
                 <rect
                   key={si}
-                  x={562 + x}
+                  x={644 + x}
                   y="0"
                   width={w}
                   height="7"
@@ -371,8 +371,8 @@ function WorkspaceScene({ animate, dark }) {
           ))}
 
           <motion.rect
-            x="706"
-            y="526"
+            x="782"
+            y="536"
             width="6"
             height="14"
             rx="1"
@@ -382,17 +382,17 @@ function WorkspaceScene({ animate, dark }) {
           />
 
           <path
-            d="M470 614 H970 L1014 656 H426 Z"
+            d="M600 612 H1000 L1030 654 H570 Z"
             fill="url(#ws-lid)"
             stroke={p.hairline}
             strokeWidth="2"
           />
-          <path d="M470 614 H970" stroke={p.topEdge} strokeWidth="2" />
-          <path d="M690 634 H750 L756 646 H684 Z" fill={p.trackpad} />
+          <path d="M600 612 H1000" stroke={p.topEdge} strokeWidth="2" />
+          <path d="M770 632 H830 L836 644 H764 Z" fill={p.trackpad} />
 
           <ellipse
-            cx="720"
-            cy="666"
+            cx="800"
+            cy="664"
             rx="300"
             ry="22"
             fill={p.castShadow}
@@ -402,7 +402,7 @@ function WorkspaceScene({ animate, dark }) {
         </g>
 
         {/* mug */}
-        <g>
+        <g transform="translate(72 0)">
           <path
             d="M1108 566 h86 v62 a20 20 0 0 1 -20 20 h-46 a20 20 0 0 1 -20 -20 z"
             fill={p.mug.body}
