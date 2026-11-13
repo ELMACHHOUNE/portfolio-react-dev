@@ -29,20 +29,20 @@ export function Navbar() {
       className={cn(
         "sticky top-0 z-40 border-b backdrop-blur-md transition-colors duration-300",
         scrolled
-          ? "border-border/70 bg-background/75 supports-backdrop-filter:bg-background/60"
-          : "border-transparent bg-background/40",
+          ? "border-stone-900/10 bg-[#f5f0e6]/90 dark:border-white/10 dark:bg-[#05070b]/90"
+          : "border-transparent bg-[#f5f0e6]/70 dark:bg-[#05070b]/70",
       )}>
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           to="/"
-          className="group flex items-center gap-2 text-sm font-semibold tracking-tight">
-          <span className="flex size-7 items-center justify-center rounded-md bg-primary font-mono text-xs text-primary-foreground">
+          className="group flex items-center gap-2 text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+          <span className="flex size-7 items-center justify-center rounded-md bg-stone-900 font-mono text-xs text-stone-50 dark:bg-stone-100 dark:text-stone-900">
             M
           </span>
           <span className="hidden sm:inline">
             {identity.firstName}
-            <span className="text-muted-foreground"> · </span>
-            <span className="font-mono text-muted-foreground">
+            <span className="text-stone-500 dark:text-stone-400"> · </span>
+            <span className="font-mono text-stone-500 dark:text-stone-400">
               {identity.lastName}
             </span>
           </span>
@@ -56,9 +56,9 @@ export function Navbar() {
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "relative rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground",
+                  "relative rounded-md px-3 py-1.5 text-sm text-stone-600 transition-colors hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100",
                   isActive &&
-                    "bg-muted/70 font-medium text-foreground after:absolute after:-bottom-[9px] after:left-3 after:right-3 after:h-px after:bg-accent",
+                    "bg-stone-900/[0.06] font-medium text-stone-900 after:absolute after:-bottom-[9px] after:left-3 after:right-3 after:h-px after:bg-amber-600 dark:bg-white/[0.07] dark:text-stone-50 dark:after:bg-amber-200/80",
                 )
               }>
               {item.label}

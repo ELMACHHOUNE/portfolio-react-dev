@@ -14,278 +14,437 @@ import { cn } from "@/lib/utils";
 const noop = () => {};
 
 /* -------------------------------------------------------------------------- */
-/*  Generative landscape                                                      */
+/*  Workspace scene (light / dark)                                            */
 /* -------------------------------------------------------------------------- */
 
-const TAU = Math.PI * 2;
-const FOG = [74, 88, 108];
-const mixRGB = (a, b, k) => [
-  a[0] + (b[0] - a[0]) * k,
-  a[1] + (b[1] - a[1]) * k,
-  a[2] + (b[2] - a[2]) * k,
+function useDarkMode() {
+  return useSyncExternalStore(
+    (cb) => {
+      const mo = new MutationObserver(cb);
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+      return () => mo.disconnect();
+    },
+    () => document.documentElement.classList.contains("dark"),
+    () => true
+  );
+}
+
+const SCREEN_ROWS = [
+  [
+    [0, 84, "p"],
+    [92, 46, "s"],
+    [146, 26, "a"],
+  ],
+  [
+    [0, 52, "p"],
+    [60, 70, "s"],
+  ],
+  [],
+  [
+    [0, 64, "s"],
+    [72, 94, "p"],
+    [174, 38, "a"],
+  ],
+  [
+    [14, 56, "s"],
+    [78, 108, "p"],
+  ],
+  [
+    [14, 90, "p"],
+    [112, 52, "s"],
+  ],
+  [
+    [0, 38, "s"],
+    [46, 82, "a"],
+  ],
+  [],
+  [[14, 116, "p"]],
 ];
-const rgb = (c) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
 
-const hash = (n) => {
-  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
-  return s - Math.floor(s);
+const LEAVES = [
+  { deg: -60, len: 0.8, w: 9 },
+  { deg: -42, len: 1.02, w: 11 },
+  { deg: -24, len: 0.88, w: 10 },
+  { deg: -6, len: 1.2, w: 12 },
+  { deg: 14, len: 0.94, w: 10 },
+  { deg: 34, len: 1.04, w: 11 },
+  { deg: 52, len: 0.82, w: 9 },
+  { deg: 22, len: 1.3, w: 12 },
+];
+
+const SCENE = {
+  dark: {
+    shell: "#070a11",
+    sky: ["#060910", "#0a111d", "#080d15"],
+    desk: ["#111a27", "#0a101a", "#04070c"],
+    glass: ["#12203a", "#1a2b45", "#0d1626"],
+    screen: ["#0e1a2c", "#091120"],
+    lid: ["#0b1119", "#151e2b", "#0a0f17"],
+    bloom: "#6f9fe8",
+    bloomOpacity: [0.12, 0.2, 0.12],
+    bars: { p: "#6f9fe8", s: "#c9d8ee", a: "#e8c08e" },
+    barOpacity: 0.55,
+    edge: "rgba(255,255,255,0.09)",
+    hairline: "rgba(255,255,255,0.06)",
+    topEdge: "rgba(255,255,255,0.14)",
+    trackpad: "rgba(255,255,255,0.035)",
+    glow: "#8ab4ff",
+    glowOpacity: 0.4,
+    warm: "#ffcf9b",
+    warmOpacity: 0.3,
+    vignette: "#000000",
+    vignetteOpacity: 0.5,
+    plant: { pot: "#0e1620", rim: "#0b121b", stem: "#1d2e26", leaf: "#182920", lit: "#22382c" },
+    mug: {
+      body: "#0d1521",
+      rim: "#101a28",
+      inner: "#1b2b40",
+      handle: "rgba(255,255,255,0.1)",
+      steam: "#cfe0ff",
+      steamOpacity: 0.3,
+    },
+    frame: "rgba(255,255,255,0.07)",
+    mullion: "rgba(255,255,255,0.06)",
+    skyline: ["#ffd9a8", "#9dc2ff"],
+    skylineOpacity: [0.55, 0.4],
+    orb: "#dfe9ff",
+    orbGlow: "#cfe0ff",
+    orbOpacity: 0.5,
+    clouds: 0.04,
+    cloud: "#ffffff",
+    deskWash: "#9dc2ff",
+    deskWashOpacity: 0.03,
+    castShadow: "#7fa8ff",
+    castShadowOpacity: 0.07,
+    caret: "#f2c98f",
+  },
+  light: {
+    shell: "#f5f0e6",
+    sky: ["#fdfaf3", "#f8f1e4", "#f2e8d8"],
+    desk: ["#f0dfc3", "#e7d1ae", "#d5bc96"],
+    glass: ["#e2f2ff", "#cfe7fb", "#b7d7f0"],
+    screen: ["#fdfeff", "#eef5fc"],
+    lid: ["#d7dce4", "#f7f8fb", "#c6cdd8"],
+    bloom: "#fff3d8",
+    bloomOpacity: [0.4, 0.55, 0.4],
+    bars: { p: "#4f7ec0", s: "#8fa4bb", a: "#bd8547" },
+    barOpacity: 0.55,
+    edge: "rgba(58,46,32,0.18)",
+    hairline: "rgba(58,46,32,0.12)",
+    topEdge: "rgba(58,46,32,0.2)",
+    trackpad: "rgba(58,46,32,0.06)",
+    glow: "#ffe7bd",
+    glowOpacity: 0.6,
+    warm: "#ffd7a3",
+    warmOpacity: 0.35,
+    vignette: "#8a6b47",
+    vignetteOpacity: 0.16,
+    plant: { pot: "#e8dbc4", rim: "#dbccb1", stem: "#5d8a58", leaf: "#7aa772", lit: "#93bf87" },
+    mug: {
+      body: "#f7f2e9",
+      rim: "#fbf8f2",
+      inner: "#e6dccb",
+      handle: "rgba(58,46,32,0.22)",
+      steam: "#ffffff",
+      steamOpacity: 0.55,
+    },
+    frame: "rgba(58,46,32,0.14)",
+    mullion: "rgba(58,46,32,0.1)",
+    skyline: ["#a9bccd", "#93a9bd"],
+    skylineOpacity: [0.55, 0.5],
+    orb: "#ffdf8f",
+    orbGlow: "#ffe7a8",
+    orbOpacity: 0.95,
+    clouds: 0.6,
+    cloud: "#ffffff",
+    deskWash: "#ffe9c4",
+    deskWashOpacity: 0.3,
+    castShadow: "#a3855c",
+    castShadowOpacity: 0.2,
+    caret: "#bd8547",
+  },
 };
-const noise = (x, seed) => {
-  const i = Math.floor(x);
-  const f = x - i;
-  const u = f * f * (3 - 2 * f);
-  const o = seed * 53.7;
-  return hash(i + o) * (1 - u) + hash(i + 1 + o) * u;
-};
-const fbm = (x, seed) => {
-  let a = 0.5;
-  let f = 1;
-  let s = 0;
-  for (let o = 0; o < 5; o++) {
-    s += a * noise(x * f, seed + o * 7.31);
-    f *= 2.07;
-    a *= 0.5;
-  }
-  return s;
-};
 
-const RAW_LAYERS = [
-  { base: 0.54, amp: 0.13, f: 3.2, speed: 3, color: [44, 57, 76], fog: 0.5, seed: 1, rim: 0.34, mist: 0.07 },
-  { base: 0.6, amp: 0.14, f: 4.0, speed: 6, color: [32, 43, 60], fog: 0.42, seed: 2, rim: 0.26, mist: 0.09 },
-  { base: 0.67, amp: 0.15, f: 5.0, speed: 11, color: [22, 31, 44], fog: 0.3, seed: 3, rim: 0.16, mist: 0.08 },
-  { base: 0.75, amp: 0.15, f: 6.5, speed: 18, color: [14, 20, 30], fog: 0.18, seed: 4, rim: 0.08, mist: 0.06 },
-  { base: 0.84, amp: 0.13, f: 8.5, speed: 28, color: [8, 12, 18], fog: 0.08, seed: 5, rim: 0, mist: 0 },
-  { base: 0.94, amp: 0.1, f: 11, speed: 42, color: [4, 6, 10], fog: 0, seed: 6, rim: 0, mist: 0 },
-].map((l) => ({
-  ...l,
-  top: rgb(l.color),
-  bottom: rgb(mixRGB(l.color, FOG, l.fog)),
-}));
+function WorkspaceScene({ animate, dark }) {
+  const p = SCENE[dark ? "dark" : "light"];
 
-const STARS = Array.from({ length: 130 }, (_, i) => ({
-  x: hash(i * 3.1 + 1),
-  y: Math.pow(hash(i * 5.7 + 2), 1.6) * 0.55,
-  r: 0.6 + hash(i * 7.3 + 3) * 1.1,
-  a: 0.25 + hash(i * 11.1 + 4) * 0.6,
-  f: 0.3 + hash(i * 13.7 + 5) * 1.2,
-  p: hash(i * 17.3 + 6) * TAU,
-}));
+  return (
+    <div
+      className={cn(
+        "absolute inset-0 overflow-hidden transition-colors duration-500",
+        dark ? "bg-[#070a11]" : "bg-[#f5f0e6]"
+      )}
+    >
+      <svg
+        viewBox="0 0 1600 900"
+        preserveAspectRatio="xMidYMid slice"
+        className="h-full w-full"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="ws-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={p.sky[0]} />
+            <stop offset="0.5" stopColor={p.sky[1]} />
+            <stop offset="1" stopColor={p.sky[2]} />
+          </linearGradient>
+          <linearGradient id="ws-desk" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={p.desk[0]} />
+            <stop offset="0.4" stopColor={p.desk[1]} />
+            <stop offset="1" stopColor={p.desk[2]} />
+          </linearGradient>
+          <linearGradient id="ws-glass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={p.glass[0]} />
+            <stop offset="0.62" stopColor={p.glass[1]} />
+            <stop offset="1" stopColor={p.glass[2]} />
+          </linearGradient>
+          <linearGradient id="ws-screen" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor={p.screen[0]} />
+            <stop offset="1" stopColor={p.screen[1]} />
+          </linearGradient>
+          <linearGradient id="ws-lid" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={p.lid[0]} />
+            <stop offset="0.5" stopColor={p.lid[1]} />
+            <stop offset="1" stopColor={p.lid[2]} />
+          </linearGradient>
+          <radialGradient id="ws-glow">
+            <stop offset="0" stopColor={p.glow} stopOpacity={p.glowOpacity} />
+            <stop offset="0.45" stopColor={p.glow} stopOpacity={p.glowOpacity * 0.35} />
+            <stop offset="1" stopColor={p.glow} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="ws-warm">
+            <stop offset="0" stopColor={p.warm} stopOpacity={p.warmOpacity} />
+            <stop offset="1" stopColor={p.warm} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="ws-vignette" cx="50%" cy="52%" r="78%">
+            <stop offset="0.42" stopColor={p.vignette} stopOpacity="0" />
+            <stop offset="1" stopColor={p.vignette} stopOpacity={p.vignetteOpacity} />
+          </radialGradient>
+          <filter id="ws-blur-lg" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="34" />
+          </filter>
+          <filter id="ws-blur-sm" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+        </defs>
 
-const MOTES = Array.from({ length: 34 }, (_, i) => ({
-  x: hash(i * 2.3 + 40),
-  y: 0.4 + hash(i * 4.1 + 41) * 0.55,
-  vx: 2 + hash(i * 6.7 + 42) * 5,
-  vy: 1.5 + hash(i * 8.9 + 43) * 4,
-  r: 1 + hash(i * 9.9 + 44) * 1.1,
-  a: 0.18 + hash(i * 12.3 + 45) * 0.32,
-  f: 0.2 + hash(i * 14.1 + 46) * 0.6,
-  p: hash(i * 15.7 + 47) * TAU,
-}));
+        {/* room */}
+        <rect width="1600" height="900" fill="url(#ws-sky)" />
 
-function Landscape({ animate }) {
-  const ref = useRef(null);
+        {/* window */}
+        <g opacity="0.92">
+          <rect
+            x="1050"
+            y="92"
+            width="420"
+            height="404"
+            rx="10"
+            fill="url(#ws-glass)"
+            stroke={p.frame}
+            strokeWidth="2"
+          />
+          <path d={`M1260 92 V496 M1050 294 H1470`} stroke={p.mullion} strokeWidth="3" />
 
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+          {/* distant skyline */}
+          <g fill={p.skyline[0]} opacity={p.skylineOpacity[0]}>
+            <rect x="1094" y="430" width="6" height="16" rx="1" />
+            <rect x="1112" y="416" width="5" height="30" rx="1" />
+            <rect x="1128" y="438" width="7" height="12" rx="1" />
+            <rect x="1160" y="424" width="5" height="24" rx="1" />
+            <rect x="1178" y="440" width="6" height="10" rx="1" />
+            <rect x="1214" y="432" width="5" height="18" rx="1" />
+          </g>
+          <g fill={p.skyline[1]} opacity={p.skylineOpacity[1]}>
+            <rect x="1146" y="440" width="6" height="10" rx="1" />
+            <rect x="1196" y="428" width="5" height="22" rx="1" />
+            <rect x="1300" y="426" width="6" height="22" rx="1" />
+            <rect x="1332" y="438" width="5" height="12" rx="1" />
+            <rect x="1370" y="430" width="6" height="18" rx="1" />
+            <rect x="1402" y="442" width="5" height="8" rx="1" />
+          </g>
 
-    let w = 0;
-    let h = 0;
-    let dpr = 1;
-    let raf = 0;
-    let last = 0;
-    let time = 26;
-    let running = false;
+          {/* clouds */}
+          <g opacity={p.clouds} fill={p.cloud} filter="url(#ws-blur-sm)">
+            <ellipse cx="1150" cy="182" rx="78" ry="17" />
+            <ellipse cx="1212" cy="203" rx="52" ry="13" />
+            <ellipse cx="1348" cy="152" rx="62" ry="15" />
+          </g>
 
-    const mist = (yc, seed, alpha, t) => {
-      for (let k = 0; k < 3; k++) {
-        const rx = w * (0.38 + 0.1 * hash(seed + k));
-        const ry = h * 0.045;
-        const span = w + rx * 2;
-        const cx = ((hash(seed * 3 + k) * span + t * (5 + seed * 2)) % span) - rx;
-        ctx.save();
-        ctx.translate(cx, yc + (k - 1) * h * 0.012);
-        ctx.scale(1, ry / rx);
-        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-        g.addColorStop(0, `rgba(140,156,180,${alpha})`);
-        g.addColorStop(1, "rgba(140,156,180,0)");
-        ctx.fillStyle = g;
-        ctx.fillRect(-rx, -rx, rx * 2, rx * 2);
-        ctx.restore();
-      }
-    };
+          {/* moon / sun */}
+          <ellipse
+            cx="1372"
+            cy="172"
+            rx="92"
+            ry="72"
+            fill={p.orbGlow}
+            opacity={p.orbOpacity * 0.3}
+            filter="url(#ws-blur-lg)"
+          />
+          <circle cx="1372" cy="172" r="19" fill={p.orb} opacity={p.orbOpacity} />
+        </g>
 
-    const draw = (t) => {
-      if (!w || !h) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = "source-over";
+        {/* ambient glows */}
+        <ellipse cx="760" cy="440" rx="520" ry="330" fill="url(#ws-glow)" />
+        <ellipse cx="1180" cy="610" rx="260" ry="150" fill="url(#ws-warm)" />
 
-      const unit = Math.min(Math.max(w, 600), 1400);
-      const sunX = w * 0.5;
-      const sunY = h * (0.45 - 0.012 * Math.sin(t * 0.05));
-      const R = Math.min(w, h) * 0.05 + 6;
-      const pulse = 0.94 + 0.06 * Math.sin(t * 0.35);
+        {/* desk */}
+        <rect x="0" y="636" width="1600" height="270" fill="url(#ws-desk)" />
+        <rect x="0" y="634" width="1600" height="2" fill={p.topEdge} />
+        <ellipse
+          cx="1180"
+          cy="720"
+          rx="420"
+          ry="220"
+          fill={p.deskWash}
+          opacity={p.deskWashOpacity}
+          filter="url(#ws-blur-lg)"
+        />
 
-      /* sky */
-      const sky = ctx.createLinearGradient(0, 0, 0, h);
-      sky.addColorStop(0, "#04060b");
-      sky.addColorStop(0.3, "#0a1220");
-      sky.addColorStop(0.5, "#1c293b");
-      sky.addColorStop(0.62, "#37455a");
-      sky.addColorStop(0.82, "#252f3f");
-      sky.addColorStop(1, "#141a24");
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, w, h);
+        {/* plant */}
+        <g transform="translate(330 640) rotate(-5)">
+          <path
+            d="M-48 0 h96 l-13 -76 h-70 z"
+            fill={p.plant.pot}
+            stroke={p.hairline}
+            strokeWidth="2"
+          />
+          <ellipse cx="0" cy="-76" rx="35" ry="6" fill={p.plant.rim} />
+          {LEAVES.map(({ deg, len, w }, i) => (
+            <g key={`${deg}-${i}`} transform={`rotate(${deg})`}>
+              <path
+                d={`M0 -6 C -3 ${-34 * len} -4 ${-48 * len} 0 ${-70 * len}`}
+                stroke={p.plant.stem}
+                strokeWidth="2"
+                fill="none"
+              />
+              <ellipse
+                cx="0"
+                cy={-60 * len}
+                rx={w}
+                ry={26 * len}
+                fill={len > 1.15 ? p.plant.lit : p.plant.leaf}
+              />
+            </g>
+          ))}
+        </g>
 
-      /* stars */
-      ctx.fillStyle = "#e8eefc";
-      for (const s of STARS) {
-        const x = ((s.x + t * 0.0003) % 1) * w;
-        const y = s.y * h;
-        const tw = 0.65 + 0.35 * Math.sin(t * s.f + s.p);
-        const fade = 1 - Math.min(1, y / (h * 0.5));
-        ctx.globalAlpha = s.a * tw * fade;
-        ctx.fillRect(x, y, s.r, s.r);
-      }
-      ctx.globalAlpha = 1;
+        {/* laptop */}
+        <g>
+          <motion.rect
+            x="536"
+            y="300"
+            width="368"
+            height="300"
+            rx="20"
+            fill={p.bloom}
+            animate={animate ? { opacity: p.bloomOpacity } : { opacity: p.bloomOpacity[1] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            filter="url(#ws-blur-lg)"
+          />
 
-      /* sun halo, disk and anamorphic streak */
-      ctx.globalCompositeOperation = "screen";
-      const halo = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, R * 11);
-      halo.addColorStop(0, `rgba(255,196,140,${0.5 * pulse})`);
-      halo.addColorStop(0.12, `rgba(240,160,110,${0.26 * pulse})`);
-      halo.addColorStop(0.4, `rgba(150,110,100,${0.09 * pulse})`);
-      halo.addColorStop(1, "rgba(80,90,120,0)");
-      ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, w, h);
+          <rect
+            x="520"
+            y="288"
+            width="400"
+            height="326"
+            rx="18"
+            fill="url(#ws-lid)"
+            stroke={p.edge}
+            strokeWidth="2"
+          />
+          <rect x="538" y="306" width="364" height="290" rx="8" fill="url(#ws-screen)" />
 
-      ctx.save();
-      ctx.translate(sunX, sunY);
-      ctx.scale(1, 0.02);
-      const rr = w * 0.5;
-      const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, rr);
-      streak.addColorStop(0, `rgba(255,205,160,${0.55 * pulse})`);
-      streak.addColorStop(1, "rgba(255,205,160,0)");
-      ctx.fillStyle = streak;
-      ctx.fillRect(-rr, -rr, rr * 2, rr * 2);
-      ctx.restore();
-      ctx.globalCompositeOperation = "source-over";
+          {SCREEN_ROWS.map((row, ri) => (
+            <g key={ri} transform={`translate(0 ${342 + ri * 24})`}>
+              {row.map(([x, w, key], si) => (
+                <rect
+                  key={si}
+                  x={562 + x}
+                  y="0"
+                  width={w}
+                  height="7"
+                  rx="3.5"
+                  fill={p.bars[key]}
+                  opacity={p.barOpacity}
+                />
+              ))}
+            </g>
+          ))}
 
-      const disk = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, R);
-      disk.addColorStop(0, "rgba(255,240,218,0.95)");
-      disk.addColorStop(1, "rgba(255,207,160,0.9)");
-      ctx.fillStyle = disk;
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, R, 0, TAU);
-      ctx.fill();
+          <motion.rect
+            x="706"
+            y="526"
+            width="6"
+            height="14"
+            rx="1"
+            fill={p.caret}
+            animate={animate ? { opacity: [1, 1, 0, 0] } : { opacity: 0.85 }}
+            transition={{ duration: 1.3, repeat: Infinity, times: [0, 0.5, 0.5, 1], ease: "linear" }}
+          />
 
-      /* ridges */
-      const step = Math.max(3, Math.ceil(w / 320));
-      for (const L of RAW_LAYERS) {
-        const base = L.base * h;
-        const amp = L.amp * h;
-        const shift = t * L.speed;
+          <path
+            d="M470 614 H970 L1014 656 H426 Z"
+            fill="url(#ws-lid)"
+            stroke={p.hairline}
+            strokeWidth="2"
+          />
+          <path d="M470 614 H970" stroke={p.topEdge} strokeWidth="2" />
+          <path d="M690 634 H750 L756 646 H684 Z" fill={p.trackpad} />
 
-        const top = new Path2D();
-        for (let x = 0; x <= w + step; x += step) {
-          const n = fbm(((x + shift) / unit) * L.f + L.seed * 19.7, L.seed);
-          const y = base - amp * (n * 1.35 - 0.45);
-          if (x === 0) top.moveTo(x, y);
-          else top.lineTo(x, y);
-        }
-        const area = new Path2D(top);
-        area.lineTo(w + step, h + 2);
-        area.lineTo(0, h + 2);
-        area.closePath();
+          <ellipse
+            cx="720"
+            cy="666"
+            rx="300"
+            ry="22"
+            fill={p.castShadow}
+            opacity={p.castShadowOpacity}
+            filter="url(#ws-blur-sm)"
+          />
+        </g>
 
-        const g = ctx.createLinearGradient(0, base - amp * 0.85, 0, base + amp * 1.4);
-        g.addColorStop(0, L.top);
-        g.addColorStop(1, L.bottom);
-        ctx.fillStyle = g;
-        ctx.fill(area);
+        {/* mug */}
+        <g>
+          <path
+            d="M1108 566 h86 v62 a20 20 0 0 1 -20 20 h-46 a20 20 0 0 1 -20 -20 z"
+            fill={p.mug.body}
+            stroke={p.hairline}
+            strokeWidth="2"
+          />
+          <path d="M1196 584 a24 24 0 0 1 0 44" fill="none" stroke={p.mug.handle} strokeWidth="7" />
+          <ellipse
+            cx="1151"
+            cy="567"
+            rx="43"
+            ry="9"
+            fill={p.mug.rim}
+            stroke={p.hairline}
+            strokeWidth="2"
+          />
+          <ellipse cx="1151" cy="566" rx="31" ry="5.5" fill={p.mug.inner} opacity="0.75" />
 
-        if (L.rim > 0) {
-          const rg = ctx.createLinearGradient(sunX - w * 0.5, 0, sunX + w * 0.5, 0);
-          rg.addColorStop(0, "rgba(255,196,140,0)");
-          rg.addColorStop(0.5, `rgba(255,196,140,${L.rim * pulse})`);
-          rg.addColorStop(1, "rgba(255,196,140,0)");
-          ctx.strokeStyle = rg;
-          ctx.lineWidth = 1.2;
-          ctx.stroke(top);
-        }
+          <g
+            filter="url(#ws-blur-sm)"
+            stroke={p.mug.steam}
+            strokeWidth="3"
+            strokeLinecap="round"
+            fill="none"
+            opacity={p.mug.steamOpacity}
+          >
+            {[0, 1.6, 3.2].map((delay, i) => (
+              <motion.path
+                key={delay}
+                d={`M${1134 + i * 18} 548 c -9 -16 7 -24 0 -40`}
+                animate={animate ? { y: [0, -7, 0] } : undefined}
+                transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut", delay }}
+              />
+            ))}
+          </g>
+        </g>
 
-        if (L.mist > 0) mist(base - amp * 0.1, L.seed, L.mist, t);
-      }
-
-      /* drifting dust */
-      ctx.fillStyle = "#ffd9b0";
-      for (const m of MOTES) {
-        const x = (((m.x * w + t * m.vx) % w) + w) % w;
-        const y = (((m.y * h - t * m.vy) % h) + h) % h;
-        const edge = Math.min(1, (y - h * 0.38) / (h * 0.12));
-        if (edge <= 0) continue;
-        ctx.globalAlpha = m.a * edge * (0.5 + 0.5 * Math.sin(t * m.f + m.p));
-        ctx.fillRect(x, y, m.r, m.r);
-      }
-      ctx.globalAlpha = 1;
-    };
-
-    const resize = () => {
-      const cw = canvas.clientWidth;
-      const ch = canvas.clientHeight;
-      if (!cw || !ch) return;
-      const cap = cw * ch > 1_200_000 ? 1.5 : 2;
-      dpr = Math.min(window.devicePixelRatio || 1, cap);
-      w = cw;
-      h = ch;
-      canvas.width = Math.round(cw * dpr);
-      canvas.height = Math.round(ch * dpr);
-      draw(time);
-    };
-
-    const loop = (now) => {
-      if (!running) return;
-      raf = requestAnimationFrame(loop);
-      if (now - last < 33) return;
-      const dt = Math.min((now - last) / 1000, 0.1);
-      last = now;
-      time += dt;
-      draw(time);
-    };
-    const start = () => {
-      if (running || !animate) return;
-      running = true;
-      last = performance.now();
-      raf = requestAnimationFrame(loop);
-    };
-    const stop = () => {
-      running = false;
-      cancelAnimationFrame(raf);
-    };
-
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) start();
-        else stop();
-      },
-      { threshold: 0 }
-    );
-    io.observe(canvas);
-
-    return () => {
-      stop();
-      ro.disconnect();
-      io.disconnect();
-    };
-  }, [animate]);
-
-  return <canvas ref={ref} aria-hidden="true" className="absolute inset-0 block h-full w-full" />;
+        {/* vignette */}
+        <rect width="1600" height="900" fill="url(#ws-vignette)" />
+      </svg>
+    </div>
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -305,26 +464,6 @@ function useCompact() {
 }
 
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-
-function Timecode({ animate }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!animate) return;
-    const el = ref.current;
-    if (!el) return;
-    const pad = (n) => String(n).padStart(2, "0");
-    const start = performance.now() - 252_000;
-    const id = window.setInterval(() => {
-      const e = (performance.now() - start) / 1000;
-      const f = Math.floor((e % 1) * 24);
-      const s = Math.floor(e) % 60;
-      const m = Math.floor(e / 60) % 60;
-      el.textContent = `00:${pad(m)}:${pad(s)}:${pad(f)}`;
-    }, 84);
-    return () => window.clearInterval(id);
-  }, [animate]);
-  return <span ref={ref}>00:04:12:00</span>;
-}
 
 function Word({ children, progress, start, end, reduce }) {
   const opacity = useTransform(progress, [start, end], [reduce ? 1 : 0.12, 1]);
@@ -356,6 +495,7 @@ export function AureliaHero({
   const grainRef = useRef(null);
   const reduce = useReducedMotion() ?? false;
   const compact = useCompact();
+  const dark = useDarkMode();
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -373,10 +513,11 @@ export function AureliaHero({
   const frameY = useTransform(grow, (v) => `calc((50% - var(--hh)) * ${(1 - v).toFixed(4)} - 14px)`);
   const radius = useTransform(grow, (v) => `${((1 - v) * 20).toFixed(2)}px`);
   const frameRadius = useTransform(grow, (v) => `${((1 - v) * 20 + 10).toFixed(2)}px`);
-  const borderColor = useTransform(grow, (v) => `rgba(255,255,255,${(0.2 * (1 - v)).toFixed(3)})`);
+  const borderColorLight = useTransform(grow, (v) => `rgba(58,46,32,${(0.18 * (1 - v)).toFixed(3)})`);
+  const borderColorDark = useTransform(grow, (v) => `rgba(255,255,255,${(0.2 * (1 - v)).toFixed(3)})`);
+  const borderColor = dark ? borderColorDark : borderColorLight;
   const frameOpacity = useTransform(grow, [0, 0.3], [1, 0]);
-  const labelOpacity = useTransform(grow, [0, 0.22], [1, 0]);
-  const innerScale = useTransform(grow, [0, 1], [reduce ? 1 : 1.4, 1]);
+  const innerScale = useTransform(grow, [0, 1], [reduce ? 1 : 1.08, 1]);
 
   const titleOpacity = useTransform(progress, [0.02, 0.34], [1, 0]);
   const leftX = useTransform(slide, [0, 1], ["0vw", reduce ? "0vw" : "-30vw"]);
@@ -409,7 +550,12 @@ export function AureliaHero({
     el.style.backgroundImage = `url(${c.toDataURL("image/png")})`;
   }, []);
 
-  const sentences = paragraph.match(/[^.!?]+[.!?]*/g)?.map((s) => s.trim()).filter(Boolean) ?? [paragraph];
+  const parsedSentences = paragraph
+    .replace(/([.!?])\s+/g, "$1\u0000")
+    .split("\u0000")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const sentences = parsedSentences.length ? parsedSentences : [paragraph];
   const totalWords = Math.max(
     1,
     sentences.reduce((n, s) => n + s.split(/\s+/).length, 0)
@@ -419,20 +565,23 @@ export function AureliaHero({
   return (
     <section
       aria-label={`${brand} hero`}
-      className={cn("relative w-full overflow-x-clip bg-[#05070b] text-stone-100", className)}
+      className={cn(
+        "relative w-full overflow-x-clip bg-[#f5f0e6] text-stone-900 dark:bg-[#05070b] dark:text-stone-100",
+        className
+      )}
     >
       <div ref={heroRef} className="relative h-[300svh]">
-        <div className="sticky top-14 h-[calc(100svh-3.5rem)] w-full overflow-hidden bg-[#05070b] [--hh:20cqh] [--hw:36cqw] [container-type:size] md:[--hh:clamp(9rem,26cqh,17rem)] md:[--hw:clamp(7rem,15cqw,13rem)]">
+        <div className="sticky top-14 h-[calc(100svh-3.5rem)] w-full overflow-hidden bg-[#f5f0e6] [--hh:20cqh] [--hw:36cqw] [container-type:size] dark:bg-[#05070b] md:[--hh:clamp(9rem,26cqh,17rem)] md:[--hw:clamp(7rem,15cqw,13rem)]">
           {/* ambient glow */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_50%,rgba(110,140,190,0.10),transparent_70%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_50%,rgba(214,178,124,0.26),transparent_70%)] dark:bg-[radial-gradient(ellipse_60%_55%_at_50%_50%,rgba(110,140,190,0.10),transparent_70%)]"
           />
 
           {/* outer hairline frame */}
           <motion.div
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 border border-white/10"
+            className="pointer-events-none absolute z-10 border border-stone-900/10 dark:border-white/10"
             style={{
               top: frameY,
               bottom: frameY,
@@ -445,7 +594,7 @@ export function AureliaHero({
 
           {/* media panel */}
           <motion.div
-            className="absolute z-10 overflow-hidden border bg-[#05070b] shadow-[0_0_90px_-24px_rgba(120,160,220,0.28)]"
+            className="absolute z-10 overflow-hidden border bg-[#f5f0e6] shadow-[0_36px_90px_-38px_rgba(120,88,52,0.5)] dark:bg-[#05070b] dark:shadow-[0_0_90px_-24px_rgba(120,160,220,0.28)]"
             style={{
               top: edgeY,
               bottom: edgeY,
@@ -466,33 +615,22 @@ export function AureliaHero({
                 scale: innerScale,
               }}
             >
-              <Landscape animate={!reduce} />
+              <WorkspaceScene animate={!reduce} dark={dark} />
             </motion.div>
 
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(2,4,8,0.6)_100%)]"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_48%,rgba(120,92,58,0.22)_100%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_48%,rgba(2,4,8,0.62)_100%)]"
             />
             <div
               ref={grainRef}
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-[0.12] mix-blend-overlay"
+              className="pointer-events-none absolute inset-0 opacity-[0.045] mix-blend-overlay dark:opacity-[0.09]"
             />
-
-            <motion.div
-              aria-hidden="true"
-              style={{ opacity: labelOpacity }}
-              className="pointer-events-none absolute inset-0 flex flex-col justify-between p-3 text-[9px] uppercase tracking-[0.24em] text-stone-200/80 md:p-4 md:text-[10px]"
-            >
-              <span>Reel 01 / 12</span>
-              <span className="self-end tabular-nums">
-                <Timecode animate={!reduce} />
-              </span>
-            </motion.div>
           </motion.div>
 
           {/* split title */}
-          <h1 className="pointer-events-none absolute inset-0 z-20 flex flex-col px-6 py-16 font-serif text-[clamp(2.25rem,11vw,3.5rem)] font-light leading-[0.95] tracking-[-0.03em] text-stone-50 [text-shadow:0_2px_40px_rgba(0,0,0,0.55)] md:flex-row md:items-center md:px-10 md:py-0 md:text-[clamp(2.4rem,6.4vw,7.5rem)]">
+          <h1 className="pointer-events-none absolute inset-0 z-20 flex flex-col px-6 py-16 font-serif text-[clamp(2.25rem,11vw,3.5rem)] font-light leading-[0.95] tracking-[-0.03em] text-stone-900 [text-shadow:0_2px_30px_rgba(255,252,244,0.7)] md:flex-row md:items-center md:px-10 md:py-0 md:text-[clamp(2.4rem,6.4vw,7.5rem)] dark:text-stone-50 dark:[text-shadow:0_2px_40px_rgba(0,0,0,0.55)]">
             <motion.span
               className="flex min-h-0 flex-1 items-end justify-center text-center md:items-center md:justify-end md:text-right"
               style={{ x: compact ? 0 : leftX, y: compact ? topY : 0, opacity: titleOpacity }}
@@ -521,7 +659,7 @@ export function AureliaHero({
                     key={i}
                     className={cn(
                       "block",
-                      i === titleRight.length - 1 && "italic text-amber-100/90"
+                      i === titleRight.length - 1 && "italic text-amber-700 dark:text-amber-100/90"
                     )}
                   >
                     {line}
@@ -535,7 +673,7 @@ export function AureliaHero({
           <motion.div
             aria-hidden="true"
             style={{ opacity: scrim }}
-            className="pointer-events-none absolute inset-0 z-[25] bg-[radial-gradient(ellipse_at_center,rgba(5,7,11,0.92)_0%,rgba(5,7,11,0.62)_100%)]"
+            className="pointer-events-none absolute inset-0 z-[25] bg-[radial-gradient(ellipse_at_center,rgba(246,241,231,0.94)_0%,rgba(246,241,231,0.72)_100%)] dark:bg-[radial-gradient(ellipse_at_center,rgba(5,7,11,0.92)_0%,rgba(5,7,11,0.62)_100%)]"
           />
 
           {/* paragraph */}
@@ -543,34 +681,39 @@ export function AureliaHero({
             style={{ opacity: paraOpacity }}
             className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center px-6 text-center"
           >
-            <span className="mb-8 flex items-center gap-4 text-[11px] uppercase tracking-[0.34em] text-amber-200/70">
-              <span className="h-px w-8 bg-amber-200/40" />
+            <span className="mb-8 flex items-center gap-4 text-[11px] uppercase tracking-[0.34em] text-amber-700/80 dark:text-amber-200/70">
+              <span className="h-px w-8 bg-amber-700/30 dark:bg-amber-200/40" />
               {paragraphEyebrow}
-              <span className="h-px w-8 bg-amber-200/40" />
+              <span className="h-px w-8 bg-amber-700/30 dark:bg-amber-200/40" />
             </span>
-            <p className="max-w-5xl font-serif text-[clamp(1.75rem,4.6vw,3.75rem)] font-light leading-[1.12] tracking-[-0.02em] text-stone-50 [text-shadow:0_2px_40px_rgba(0,0,0,0.6)]">
-              {sentences.map((sentence, si) => (
-                <span
-                  key={si}
-                  className={cn(
-                    "block",
-                    si === sentences.length - 1 && si > 0 && "italic text-amber-100/90"
-                  )}
-                >
-                  {sentence.split(/\s+/).map((word, wi) => {
-                    const i = wordIndex++;
-                    const start = 0.66 + (i / totalWords) * 0.18;
-                    return (
-                      <Fragment key={wi}>
-                        {wi > 0 && " "}
-                        <Word progress={progress} start={start} end={start + 0.08} reduce={reduce}>
-                          {word}
-                        </Word>
-                      </Fragment>
-                    );
-                  })}
-                </span>
-              ))}
+            <p className="max-w-4xl font-serif text-[clamp(1.5rem,3.6vw,3rem)] font-light leading-[1.14] tracking-[-0.02em] text-stone-900 [text-shadow:0_2px_30px_rgba(255,252,244,0.7)] dark:text-stone-50 dark:[text-shadow:0_2px_40px_rgba(0,0,0,0.6)]">
+              {sentences.map((sentence, si) => {
+                const isLast = si === sentences.length - 1;
+                const dashAt = isLast ? sentence.indexOf(" — ") : -1;
+                const italicFrom =
+                  dashAt > 0 ? sentence.slice(0, dashAt).split(/\s+/).length : -1;
+
+                return (
+                  <span key={si} className="block">
+                    {sentence.split(/\s+/).map((word, wi) => {
+                      const i = wordIndex++;
+                      const start = 0.66 + (i / totalWords) * 0.18;
+                      return (
+                        <Fragment key={wi}>
+                          {wi > 0 && " "}
+                          <Word progress={progress} start={start} end={start + 0.08} reduce={reduce}>
+                            {italicFrom >= 0 && wi >= italicFrom ? (
+                              <em className="italic text-amber-700 dark:text-amber-100/90">{word}</em>
+                            ) : (
+                              word
+                            )}
+                          </Word>
+                        </Fragment>
+                      );
+                    })}
+                  </span>
+                );
+              })}
             </p>
           </motion.div>
 
@@ -578,11 +721,11 @@ export function AureliaHero({
           <motion.div
             aria-hidden="true"
             style={{ opacity: cueOpacity }}
-            className="pointer-events-none absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-2 text-[10px] uppercase tracking-[0.34em] text-stone-400"
+            className="pointer-events-none absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-2 text-[10px] uppercase tracking-[0.34em] text-stone-600 dark:text-stone-400"
           >
             <span>{scrollLabel}</span>
             <motion.span
-              className="block h-8 w-px origin-top bg-gradient-to-b from-white/60 to-transparent"
+              className="block h-8 w-px origin-top bg-gradient-to-b from-stone-900/45 to-transparent dark:from-white/60"
               animate={reduce ? undefined : { scaleY: [0.2, 1, 0.2], opacity: [0.3, 1, 0.3] }}
               transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
             />
@@ -590,17 +733,17 @@ export function AureliaHero({
 
           {/* header */}
           <header className="absolute inset-x-0 top-0 z-40 grid grid-cols-2 items-center px-6 py-5 md:grid-cols-3 md:px-10 md:py-7">
-            <span className="text-xs font-medium uppercase tracking-[0.42em] text-stone-100">
+            <span className="text-xs font-medium uppercase tracking-[0.42em] text-stone-900 dark:text-stone-100">
               {brand}
             </span>
-            <span className="hidden text-center text-[11px] uppercase tracking-[0.3em] text-stone-400 md:block">
+            <span className="hidden text-center text-[11px] uppercase tracking-[0.3em] text-stone-600 md:block dark:text-stone-400">
               {eyebrow}
             </span>
             <button
               id="aurelia-hero-showreel"
               type="button"
               onClick={onCtaClick}
-              className="inline-flex cursor-pointer items-center gap-2 justify-self-end rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-xs tracking-wide text-stone-100 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/60"
+              className="inline-flex cursor-pointer items-center gap-2 justify-self-end rounded-full border border-stone-900/15 bg-white/70 px-4 py-2 text-xs tracking-wide text-stone-900 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/50 dark:border-white/15 dark:bg-white/[0.04] dark:text-stone-100 dark:hover:bg-white/10 dark:focus-visible:ring-amber-200/60"
             >
               <Play className="size-3 fill-current" aria-hidden="true" />
               {ctaLabel}
